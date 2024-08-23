@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
@@ -14,6 +15,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   File? _image;
   Uint8List? _serverImage;
+  String? _disease;
 
   Future<void> _captureImage() async {
     final pickedFile =
@@ -22,6 +24,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (pickedFile != null) {
       setState(() {
         _image = File(pickedFile.path);
+        _serverImage = null;
       });
     }
   }
@@ -33,6 +36,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (pickedFile != null) {
       setState(() {
         _image = File(pickedFile.path);
+        _serverImage = null;
       });
     }
   }
@@ -41,17 +45,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final uri = Uri.parse('http://192.168.100.57:5000/image');
     final request = http.MultipartRequest('POST', uri)
       ..files.add(await http.MultipartFile.fromPath('image', imageFile.path));
-    if (mounted) {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (BuildContext context) {
-          return const Center(
-            child: CircularProgressIndicator(),
-          );
-        },
-      );
-    }
+
     try {
       final response = await request.send();
 
@@ -66,10 +60,23 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     } catch (e) {
       print('Error $e');
-    } finally {
-      if (mounted) {
-        Navigator.of(context).pop();
+    }
+  }
+
+  Future<void> detectDisease() async {
+    try {
+      final uri = Uri.parse('http://192.168.100.57:5000/detections/');
+      final response = await http.post(uri);
+      if (response.statusCode == 200) {
+        final result = jsonDecode(response.body);
+        setState(() {
+          _disease = result['detection']['class'];
+        });
+      } else {
+        print('Gagal, status code: ${response.statusCode}');
       }
+    } catch (e) {
+      print('Error $e');
     }
   }
 
@@ -88,19 +95,33 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            if (_image != null)
-              Image.file(
-                _image!,
-                height: 640,
-                width: 640,
-                fit: BoxFit.cover,
+            if (_serverImage != null)
+              Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(top: 20),
+                    child: Image.memory(
+                      _serverImage!,
+                      height: 300,
+                      width: 300,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(_disease!),
+                  )
+                ],
               )
-            else if (_serverImage != null)
-              Image.memory(
-                _serverImage!,
-                height: 640,
-                width: 640,
-                fit: BoxFit.cover,
+            else if (_image != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 20),
+                child: Image.file(
+                  _image!,
+                  height: 300,
+                  width: 300,
+                  fit: BoxFit.cover,
+                ),
               )
             else
               Padding(
@@ -133,7 +154,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   SizedBox(
                     height: 50,
-                    width: 180,
+                    width: 150,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF34a203)),
@@ -147,7 +168,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                           SizedBox(width: 8),
                           Text(
-                            'Ambil Gambar',
+                            'Camera',
                             style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.bold,
@@ -159,7 +180,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   SizedBox(
                     height: 50,
-                    width: 180,
+                    width: 150,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF34a203)),
@@ -174,7 +195,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                           SizedBox(width: 8),
                           Text(
-                            'Pilih dari Gallery',
+                            'Gallery',
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
@@ -191,11 +212,13 @@ class _HomeScreenState extends State<HomeScreen> {
             if (_image != null)
               SizedBox(
                 height: 50,
-                width: 180,
+                width: 150,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF34a203)),
-                  onPressed: () => _uploadImage(_image!),
+                  onPressed: () {
+                    _uploadImage(_image!);
+                  },
                   child: const Row(
                     children: [
                       Icon(
@@ -205,7 +228,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       SizedBox(width: 8),
                       Text(
-                        'Deteksi Penyakit',
+                        'Deteksi',
                         style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
