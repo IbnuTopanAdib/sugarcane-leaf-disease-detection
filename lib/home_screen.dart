@@ -42,7 +42,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _uploadImage(File imageFile) async {
-    final uri = Uri.parse('http://192.168.100.57:5000/image');
+    final uri = Uri.parse('http://localhost:5000/image');
     final request = http.MultipartRequest('POST', uri)
       ..files.add(await http.MultipartFile.fromPath('image', imageFile.path));
 
@@ -65,7 +65,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> detectDisease() async {
     try {
-      final uri = Uri.parse('http://192.168.100.57:5000/detections/');
+      final uri = Uri.parse('http://localhost:5000/detections/');
       final response = await http.post(uri);
       if (response.statusCode == 200) {
         final result = jsonDecode(response.body);
